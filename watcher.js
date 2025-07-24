@@ -2,30 +2,26 @@ const { exec } = require('child_process');
 const chokidar = require('chokidar');
 const browserSync = require('browser-sync').create();
 
-// Compile SCSS once initially
-exec('npx sass src/style.scss public/style.css', (err, stdout, stderr) => {
-  if (err) console.error(stderr);
+// Initial compile
+exec('npx sass src/style.scss public/style.css', (err) => {
+  if (err) console.error(err);
 });
 
-// Watch SCSS changes and recompile
+// Watch SCSS
 chokidar.watch('src/style.scss').on('change', () => {
   console.log('🔄 SCSS changed. Recompiling...');
-  exec('npx sass src/style.scss public/style.css', (err, stdout, stderr) => {
-    if (err) return console.error(stderr);
+  exec('npx sass src/style.scss public/style.css', (err) => {
+    if (err) return console.error(err);
     console.log('✅ SCSS compiled.');
-    browserSync.reload("style.css");
+    browserSync.reload('public/style.css');
   });
 });
 
-// Start local server
+// Serve
 browserSync.init({
   server: {
-    baseDir: "./",
-    routes: {
-      "/style.css": "./public/style.css",
-      "/script.js": "./public/script.js"
-    }
+    baseDir: './',
   },
-  files: ["index.html", "public/script.js"],
-  open: true
+  files: ['index.html', 'public/*.js', 'public/*.css'],
+  open: true,
 });
