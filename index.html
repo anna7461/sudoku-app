@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sudoku.js</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h1>Sudoku</h1>
+    <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+    </select>
+    <div class="action-buttons-container">
+        <button class="button" id="newGame">New Game</button>
+        <button class="button" id="hintBtn">Get Hint</button>
+        <button class="button" id="checkPuzzle">Check</button>
+        <button class="button" id="toggleNotes">✏️ Notes: Off</button>
+        <button class="button" id="resetNotes">🧹 Reset Notes</button>
+        <button class="button" id="resetGame">🔄 Reset Game</button>
+    </div>
+
+    <p id="checkResult"></p>
+    <table id="sudokuBoard"></table>
+
+
+    <div id="dockBoard" class="dock-board"></div>
+
+    <script type="module" src="public/script.js"></script>
+</body>
+
+</html>

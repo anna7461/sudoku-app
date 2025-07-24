@@ -1,0 +1,239 @@
+// Variables
+$highlight-yellow: #ffe58a;
+$blue: #2196F3;
+$green-bg: #eaffea;
+$note-highlight: #ffec99;
+$conflict-red: red;
+$note-text-color: white;
+$dock-bg: #eee;
+$dock-active-bg: #E3F2FD;
+$dock-completed-bg: black;
+
+// Global styles
+* {
+  box-sizing: border-box;
+  font-family: sans-serif;
+}
+
+body {
+  text-align: center;
+}
+
+// Buttons
+.action-buttons-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.button {
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: $blue;
+    color: white;
+  }
+}
+
+// Sudoku Board
+table {
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 20px auto;
+}
+
+td {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ccc;
+  text-align: center;
+
+  &.fixed {
+    font-weight: bold;
+    color: cornflowerblue;
+    font-size: 22px;
+  }
+
+  &.highlighted {
+    background-color: $highlight-yellow;
+  }
+
+  &.completed {
+    color: black !important;
+
+    input {
+      color: black !important;
+      background-color: transparent !important;
+    }
+  }
+}
+
+// Cell inputs
+td input {
+  border: 0;
+  width: 40px;
+  height: 40px;
+  text-align: center;
+
+  &.correct:not(.highlighted .correct) {
+    background-color: $green-bg;
+    font-weight: bold;
+    color: green;
+    pointer-events: none;
+  }
+}
+
+// 3x3 Grid Borders
+#sudokuBoard {
+  tr:nth-child(3n) td {
+    border-bottom: 2px solid black;
+  }
+
+  td:nth-child(3n) {
+    border-right: 2px solid black;
+  }
+
+  tr:nth-child(1) td {
+    border-top: 2px solid black;
+  }
+
+  td:nth-child(1) {
+    border-left: 2px solid black;
+  }
+}
+
+// Invalid cell
+.invalid {
+  background-color: #ffecec;
+  border: 2px solid red !important;
+}
+
+// Cell Wrapper
+.cell-wrapper {
+  position: relative;
+  width: 45px;
+  height: 45px;
+  pointer-events: none;
+
+  input,
+  .notes-grid {
+    pointer-events: auto;
+  }
+}
+
+.normal-input {
+  font-size: 20px;
+  border: none;
+  background: transparent;
+  width: 45px;
+  height: 45px;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+// Notes input
+.notes-input {
+  font-family: monospace;
+  font-size: 12px;
+  padding: 2px;
+  text-align: center;
+  resize: none;
+  border: none;
+  width: 45px;
+  height: 45px;
+  box-sizing: border-box;
+  position: absolute;
+  inset: 0;
+  line-height: 1.2;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// Notes grid
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 1px;
+  width: 100%;
+  height: 45px;
+  text-align: center;
+  font-size: 12px;
+  padding: 2px;
+}
+
+.note {
+  background-color: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  user-select: none;
+
+  &.highlighted-note {
+    background-color: $note-highlight;
+  }
+
+  &.conflict-note {
+    background-color: $conflict-red;
+    color: $note-text-color;
+    border-radius: 2px;
+  }
+}
+
+// Utility
+.hidden {
+  visibility: hidden;
+}
+
+// Dock board
+.dock-board {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.dock-cell {
+  width: 36px;
+  height: 48px;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  background-color: $dock-bg;
+  border-radius: 4px;
+  padding-top: 5px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+
+  &.completed {
+    background-color: $dock-completed-bg;
+    color: white;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  &.active {
+    border: 2px solid $blue;
+    background-color: $dock-active-bg;
+  }
+}
+
+.dock-count {
+  font-size: 12px;
+  color: #555;
+  padding-bottom: 4px;
+}
