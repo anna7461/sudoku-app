@@ -2,7 +2,7 @@ node_moddules# ✅ Node dependencies
 node_modules/
 
 # ✅ Compiled CSS from SCSS
-public/style.css
+#public/style.css
 public/style.css.map
 
 # ✅ Compiled JS (if using bundlers later)
