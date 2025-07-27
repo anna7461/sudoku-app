@@ -48,13 +48,14 @@ table {
   table-layout: fixed;
   border-collapse: collapse;
   border-spacing: 0;
-  margin: 20px 0;
-  width: 100%;
+  margin: 20px auto;
+  
 
-  @media (max-width: 1000px) {
+  @media (max-width: 480px) {
     transform: scale(.957);
     position: relative;
     left: -10px;
+    width: 100%;
   }
 }
 
