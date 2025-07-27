@@ -213,6 +213,8 @@ function renderBoard(puzzle) {
                 const input = document.createElement("input");
                 input.type = "text";
                 input.maxLength = 1;
+                input.inputMode = "numeric";
+                input.pattern = "[1-9]";
                 input.classList.add("normal-input");
 
                 const notes = document.createElement("div");
