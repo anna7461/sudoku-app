@@ -21,7 +21,7 @@ $black: #000;
 body {
   text-align: center;
   overflow-x: hidden;
-  
+
 }
 
 // Buttons
@@ -52,7 +52,7 @@ table {
   border-collapse: collapse;
   border-spacing: 0;
   margin: 20px auto;
-  
+
 
   @media (max-width: 480px) {
     transform: scale(.957);
@@ -109,8 +109,8 @@ td input {
 }
 
 td.correct.highlighted {
-    color: $lightest;
-    background-color: $success;
+  color: $lightest;
+  background-color: $success;
 
 }
 
@@ -277,4 +277,9 @@ td.highlihted .invalid {
   font-size: 12px;
   color: $darkest;
   padding-bottom: 4px;
+}
+
+.highlight-ways {
+  background-color: $lightest;
+  /* Light blue highlight */
 }

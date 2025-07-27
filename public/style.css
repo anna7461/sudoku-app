@@ -231,4 +231,9 @@ td.highlihted .invalid {
   padding-bottom: 4px;
 }
 
+.highlight-ways {
+  background-color: #f5f6fa;
+  /* Light blue highlight */
+}
+
 /*# sourceMappingURL=style.css.map */

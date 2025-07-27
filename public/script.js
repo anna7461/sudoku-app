@@ -192,7 +192,7 @@ function updateNotesDisplay(notesEl) {
 }
 
 function renderBoard(puzzle) {
-    const {notes: savedNotes, inputs: savedInputs} = loadGameState();
+    const { notes: savedNotes, inputs: savedInputs } = loadGameState();
     const originalPuzzle = JSON.parse(localStorage.getItem("originalPuzzle"));
     const table = document.getElementById("sudokuBoard");
     table.innerHTML = "";
@@ -374,14 +374,38 @@ function renderBoard(puzzle) {
 
             // Add highlight click handler to every cell (fixed or editable)
             td.addEventListener("click", () => {
+                const r = parseInt(td.dataset.row, 10);
+                const c = parseInt(td.dataset.col, 10);
+
+                // Clear previous highlights
+                document.querySelectorAll("#sudokuBoard td.highlighted").forEach(cell => {
+                    cell.classList.remove("highlighted");
+                });
+
+                document.querySelectorAll("#sudokuBoard td.highlight-ways").forEach(cell => {
+                    cell.classList.remove("highlight-ways");
+                });
+
+                // Add highlight to the clicked cell itself
+                td.classList.add("highlighted");
+
+                // Highlight row, col, and box
+                highlightWays(r, c);
+
+                // Optional: if the cell contains a number, highlight matching values too
                 const input = td.querySelector("input");
                 const val = input?.value?.trim() || td.textContent?.trim();
+
                 if (/^[1-9]$/.test(val)) {
                     highlightMatching(val);
                 }
             });
 
+
+
             tr.appendChild(td);
+            td.dataset.row = row;
+            td.dataset.col = col;
         }
         table.appendChild(tr);
     }
@@ -389,6 +413,24 @@ function renderBoard(puzzle) {
     // renderBoard(puzzle);
     applyCompletedClass();
     updateDockBoard();
+}
+
+function highlightWays(row, col) {
+    const allCells = document.querySelectorAll("#sudokuBoard td");
+
+    allCells.forEach(cell => {
+        const r = parseInt(cell.dataset.row, 10);
+        const c = parseInt(cell.dataset.col, 10);
+
+        const inSameRow = r === row;
+        const inSameCol = c === col;
+        const inSameBox = Math.floor(r / 3) === Math.floor(row / 3) &&
+                          Math.floor(c / 3) === Math.floor(col / 3);
+
+        if (inSameRow || inSameCol || inSameBox) {
+            cell.classList.add("highlight-ways");
+        }
+    });
 }
 
 function isSafe(board, row, col, num) {
@@ -437,7 +479,7 @@ function removeCells(board, difficulty = "easy") {
 }
 
 function generateSudoku(difficulty) {
-    const board = Array.from({length: 9}, () => Array(9).fill(0));
+    const board = Array.from({ length: 9 }, () => Array(9).fill(0));
     solveSudoku(board);
     solutionBoard = JSON.parse(JSON.stringify(board));
     localStorage.setItem("solutionBoard", JSON.stringify(solutionBoard)); // ✅ Save it!
@@ -518,7 +560,7 @@ hintBtn.addEventListener("click", () => {
 
                 const saved = JSON.parse(localStorage.getItem("userInputs")) || [];
 
-                saved.push({row: r, col: c, value: String(correct), invalid: false});
+                saved.push({ row: r, col: c, value: String(correct), invalid: false });
                 localStorage.setItem("userInputs", JSON.stringify(saved));
 
                 saveGameState();
@@ -594,7 +636,7 @@ function loadGameState() {
     const toggleNotesBtn = document.getElementById("toggleNotes");
     toggleNotesBtn.textContent = notesMode ? "✏️ Notes: On" : "✏️ Notes: Off";
 
-    return {board, notes, inputs};
+    return { board, notes, inputs };
 }
 
 const state = loadGameState();
