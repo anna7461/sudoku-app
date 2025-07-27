@@ -217,6 +217,7 @@ td.highlihted .invalid {
 
   &.highlighted-note {
     background-color: $primary;
+    color: $lightest;
   }
 
   &.conflict-note {

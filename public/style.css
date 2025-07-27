@@ -176,6 +176,7 @@ td.highlihted .invalid {
 }
 .note.highlighted-note {
   background-color: #3d55cc;
+  color: #f5f6fa;
 }
 .note.conflict-note {
   background-color: #e8584a;
