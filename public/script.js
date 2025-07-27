@@ -234,6 +234,7 @@ function renderBoard(puzzle) {
                         input.readOnly = true;
                         notes.readOnly = true;
                         input.classList.add("correct");
+                        td.classList.add("correct");
                         input.style.display = "block";
                         notes.style.display = "none";
                         notes.dataset.notes = "";

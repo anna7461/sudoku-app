@@ -24,8 +24,8 @@ body {
   transition: background-color 0.3s ease;
 }
 .button:hover {
-  background-color: #2196F3;
-  color: white;
+  background-color: #3d55cc;
+  color: #f5f6fa;
 }
 
 table {
@@ -46,23 +46,25 @@ table {
 td {
   width: 40px;
   height: 40px;
-  border: 1px solid #ccc;
+  border: 1px solid #dadef2;
   text-align: center;
   padding: 0;
 }
 td.fixed {
-  font-weight: bold;
-  color: cornflowerblue;
+  font-weight: 600;
+  color: #141a33;
   font-size: 22px;
 }
 td.highlighted {
-  background-color: #ffe58a;
+  background-color: #3d55cc;
+  color: #f5f6fa;
+  font-weight: normal;
 }
 td.completed {
-  color: black !important;
+  color: #141a33 !important;
 }
 td.completed input {
-  color: black !important;
+  color: #141a33 !important;
   background-color: transparent !important;
 }
 
@@ -73,28 +75,38 @@ td input {
   text-align: center;
 }
 td input.correct:not(.highlighted .correct) {
-  background-color: #eaffea;
   font-weight: bold;
-  color: green;
-  pointer-events: none;
+  color: #37be76;
+}
+td input:focus {
+  outline: none;
+}
+
+td.correct.highlighted {
+  color: #f5f6fa;
+  background-color: #37be76;
 }
 
 #sudokuBoard tr:nth-child(3n) td {
-  border-bottom: 2px solid black;
+  border-bottom: 2px solid #878ca8;
 }
 #sudokuBoard td:nth-child(3n) {
-  border-right: 2px solid black;
+  border-right: 2px solid #878ca8;
 }
 #sudokuBoard tr:nth-child(1) td {
-  border-top: 2px solid black;
+  border-top: 2px solid #878ca8;
 }
 #sudokuBoard td:nth-child(1) {
-  border-left: 2px solid black;
+  border-left: 2px solid #878ca8;
 }
 
 .invalid {
-  background-color: #ffecec;
-  border: 2px solid red !important;
+  border: 2px solid #e8584a !important;
+}
+
+td.highlihted .invalid {
+  background-color: #e8584a !important;
+  color: #f5f6fa !important;
 }
 
 .cell-wrapper {
@@ -117,6 +129,9 @@ td input.correct:not(.highlighted .correct) {
   position: absolute;
   inset: 0;
   z-index: 1;
+}
+.highlighted .normal-input {
+  color: #f5f6fa;
 }
 
 .notes-input {
@@ -160,11 +175,11 @@ td input.correct:not(.highlighted .correct) {
   margin: 1px;
 }
 .note.highlighted-note {
-  background-color: #ffec99;
+  background-color: #3d55cc;
 }
 .note.conflict-note {
-  background-color: red;
-  color: white;
+  background-color: #e8584a;
+  color: #f5f6fa;
 }
 
 .hidden {
@@ -184,7 +199,7 @@ td input.correct:not(.highlighted .correct) {
   font-size: 20px;
   font-weight: bold;
   text-align: center;
-  background-color: #eee;
+  background-color: #f5f6fa;
   border-radius: 4px;
   padding-top: 5px;
   cursor: pointer;
@@ -195,19 +210,23 @@ td input.correct:not(.highlighted .correct) {
   position: relative;
 }
 .dock-cell.completed {
-  background-color: black;
-  color: white;
+  background-color: #dadef2;
+  color: #f5f6fa;
   opacity: 0.4;
   pointer-events: none;
 }
 .dock-cell.active {
-  border: 2px solid #2196F3;
-  background-color: #E3F2FD;
+  border: 2px solid #3d55cc;
+  background-color: #3d55cc;
+  color: #f5f6fa;
+}
+.dock-cell.active .dock-count {
+  color: #f5f6fa;
 }
 
 .dock-count {
   font-size: 12px;
-  color: #555;
+  color: #141a33;
   padding-bottom: 4px;
 }
 

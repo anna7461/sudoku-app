@@ -1,13 +1,16 @@
 // Variables
-$highlight-yellow: #ffe58a;
-$blue: #2196F3;
-$green-bg: #eaffea;
-$note-highlight: #ffec99;
-$conflict-red: red;
-$note-text-color: white;
-$dock-bg: #eee;
-$dock-active-bg: #E3F2FD;
-$dock-completed-bg: black;
+$primary: #3d55cc;
+$darkest: #141a33;
+$dark: #505673;
+$medium: #878ca8;
+$light: #dadef2;
+$lightest: #f5f6fa;
+$white: #fff;
+$warning: #ffa800;
+$info: #3699ff;
+$danger: #e8584a;
+$success: #37be76;
+$black: #000;
 
 // Global styles
 * {
@@ -38,8 +41,8 @@ body {
   transition: background-color 0.3s ease;
 
   &:hover {
-    background-color: $blue;
-    color: white;
+    background-color: $primary;
+    color: $lightest;
   }
 }
 
@@ -62,25 +65,27 @@ table {
 td {
   width: 40px;
   height: 40px;
-  border: 1px solid #ccc;
+  border: 1px solid $light;
   text-align: center;
   padding: 0;
 
   &.fixed {
-    font-weight: bold;
-    color: cornflowerblue;
+    font-weight: 600;
+    color: $darkest;
     font-size: 22px;
   }
 
   &.highlighted {
-    background-color: $highlight-yellow;
+    background-color: $primary;
+    color: $lightest;
+    font-weight: normal;
   }
 
   &.completed {
-    color: black !important;
+    color: $darkest !important;
 
     input {
-      color: black !important;
+      color: $darkest !important;
       background-color: transparent !important;
     }
   }
@@ -94,36 +99,49 @@ td input {
   text-align: center;
 
   &.correct:not(.highlighted .correct) {
-    background-color: $green-bg;
     font-weight: bold;
-    color: green;
-    pointer-events: none;
+    color: $success;
+  }
+
+  &:focus {
+    outline: none;
   }
 }
+
+td.correct.highlighted {
+    color: $lightest;
+    background-color: $success;
+
+}
+
 
 // 3x3 Grid Borders
 #sudokuBoard {
   tr:nth-child(3n) td {
-    border-bottom: 2px solid black;
+    border-bottom: 2px solid $medium;
   }
 
   td:nth-child(3n) {
-    border-right: 2px solid black;
+    border-right: 2px solid $medium;
   }
 
   tr:nth-child(1) td {
-    border-top: 2px solid black;
+    border-top: 2px solid $medium;
   }
 
   td:nth-child(1) {
-    border-left: 2px solid black;
+    border-left: 2px solid $medium;
   }
 }
 
 // Invalid cell
 .invalid {
-  background-color: #ffecec;
-  border: 2px solid red !important;
+  border: 2px solid $danger !important;
+}
+
+td.highlihted .invalid {
+  background-color: $danger !important;
+  color: $lightest !important;
 }
 
 // Cell Wrapper
@@ -148,6 +166,10 @@ td input {
   position: absolute;
   inset: 0;
   z-index: 1;
+
+  .highlighted & {
+    color: $lightest;
+  }
 }
 
 // Notes input
@@ -194,12 +216,12 @@ td input {
   margin: 1px;
 
   &.highlighted-note {
-    background-color: $note-highlight;
+    background-color: $primary;
   }
 
   &.conflict-note {
-    background-color: $conflict-red;
-    color: $note-text-color;
+    background-color: $danger;
+    color: $lightest;
   }
 }
 
@@ -222,7 +244,7 @@ td input {
   font-size: 20px;
   font-weight: bold;
   text-align: center;
-  background-color: $dock-bg;
+  background-color: $lightest;
   border-radius: 4px;
   padding-top: 5px;
   cursor: pointer;
@@ -233,20 +255,25 @@ td input {
   position: relative;
 
   &.completed {
-    background-color: $dock-completed-bg;
-    color: white;
+    background-color: $light;
+    color: $lightest;
     opacity: 0.4;
     pointer-events: none;
   }
 
   &.active {
-    border: 2px solid $blue;
-    background-color: $dock-active-bg;
+    border: 2px solid $primary;
+    background-color: $primary;
+    color: $lightest;
+
+    .dock-count {
+      color: $lightest;
+    }
   }
 }
 
 .dock-count {
   font-size: 12px;
-  color: #555;
+  color: $darkest;
   padding-bottom: 4px;
 }
