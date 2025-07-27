@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sudoku.js</title>
     <link rel="stylesheet" href="public/style.css">
-<script src="public/script.js" type="module"></script>
-
+    <script src="public/script.js" type="module"></script>
 </head>
 
 <body>
@@ -25,14 +24,33 @@
         <button class="button" id="resetNotes">🧹 Reset Notes</button>
         <button class="button" id="resetGame">🔄 Reset Game</button>
     </div>
-
     <p id="checkResult"></p>
-    <table id="sudokuBoard"></table>
 
+    <div class="soduku-board"></div>
+
+    <div class="notes-cell">
+        <div class="notes-cell-header">
+            <span>Notes</span>
+            <button id="closeNotes">X</button>
+        </div>
+        <div class="notes-cell-content">
+            <div class="notes-grid">
+                <div class="notes-grid-row">
+                    <div class="notes-grid  cell">1</div>
+                    <div class="notes-grid  cell">2</div>           
+                    <div class="notes-grid  cell">3</div>
+                    <div class="notes-grid  
+    cell">4</div>   
+                    <div class="notes-grid cell">5</div>
+                    <div class="notes-grid cell">6</div>
+                    <div class="notes-grid  cell">7</div>
+                    <div class="notes-grid cell">8</div>    
+                    
+            </div>
+        </div>
+    </div>
 
     <div id="dockBoard" class="dock-board"></div>
-
-    <!-- <script type="module" src="public/script.js"></script> -->
 </body>
 
 </html>
