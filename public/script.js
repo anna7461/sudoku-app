@@ -1,5 +1,17 @@
 let solutionBoard = [];
 let notesMode = false;
+let selectedCell = null;
+let moveHistory = [];
+let savedInputs = [];
+let savedNotes = {};
+
+try {
+    savedInputs = JSON.parse(localStorage.getItem("userInputs")) || [];
+    savedNotes = JSON.parse(localStorage.getItem("savedNotes")) || {};
+} catch (e) {
+    console.error("Global init: Failed to parse savedInputs or savedNotes from localStorage", { error: e.message });
+}
+
 
 const toggleNotesBtn = document.getElementById("toggleNotes");
 const resetNotesBtn = document.getElementById("resetNotes");
@@ -192,29 +204,46 @@ function updateNotesDisplay(notesEl) {
 }
 
 function renderBoard(puzzle) {
+    if (!puzzle || !Array.isArray(puzzle) || puzzle.length !== 9) {
+        console.error("renderBoard: Invalid puzzle input", { puzzle });
+        return;
+    }
+
     const { notes: savedNotes, inputs: savedInputs } = loadGameState();
     const originalPuzzle = JSON.parse(localStorage.getItem("originalPuzzle"));
     const table = document.getElementById("sudokuBoard");
+    if (!table) {
+        console.error("renderBoard: sudokuBoard table not found in DOM");
+        return;
+    }
+
     table.innerHTML = "";
 
     for (let row = 0; row < 9; row++) {
-        let tr = document.createElement("tr");
+        if (!Array.isArray(puzzle[row]) || puzzle[row].length !== 9) {
+            console.error("renderBoard: Invalid row in puzzle", { row, rowData: puzzle[row] });
+            continue;
+        }
+        const tr = document.createElement("tr");
+
         for (let col = 0; col < 9; col++) {
             const td = document.createElement("td");
+            td.dataset.row = row;
+            td.dataset.col = col;
 
             const inputData = savedInputs.find(i => i.row === row && i.col === col);
             const isFixed = originalPuzzle?.[row]?.[col] !== 0 && !inputData;
 
             if (!isFixed) {
-                // Editable cell
                 const wrapper = document.createElement("div");
                 wrapper.classList.add("cell-wrapper");
 
                 const input = document.createElement("input");
                 input.type = "text";
+                input.readOnly = true;
+                input.tabIndex = 0;
                 input.maxLength = 1;
-                input.inputMode = "numeric";
-                input.pattern = "[1-9]";
+                input.inputMode = "none";
                 input.classList.add("normal-input");
 
                 const notes = document.createElement("div");
@@ -224,193 +253,73 @@ function renderBoard(puzzle) {
                 updateNotesDisplay(notes);
 
                 const saved = savedInputs?.find(i => i.row === row && i.col === col);
-                let isCorrect = false;
 
                 if (saved) {
                     input.value = saved.value;
-
-                    if (Number(saved.value) === solutionBoard[row][col]) {
-                        isCorrect = true;
-                        input.readOnly = true;
-                        notes.readOnly = true;
+                    if (!solutionBoard[row]) {
+                        console.error("renderBoard: solutionBoard row undefined", { row, col });
+                    } else if (Number(saved.value) === solutionBoard[row][col]) {
                         input.classList.add("correct");
                         td.classList.add("correct");
-                        input.style.display = "block";
                         notes.style.display = "none";
                         notes.dataset.notes = "";
-                    } else {
-                        // ⚠️ Not correct, but maybe marked as invalid earlier
-                        if (saved.invalid) {
-                            input.classList.add("invalid");
-                        }
+                    } else if (saved.invalid) {
+                        input.classList.add("invalid");
                     }
+                } else if (input.value && !/^[1-9]$/.test(input.value)) {
+                    console.warn("renderBoard: Invalid input value detected", { row, col, value: input.value });
                 }
-
-                input.addEventListener("focus", () => {
-                    const val = input.value.trim();
-                    if (/^[1-9]$/.test(val)) {
-                        highlightMatching(val);
-                    }
-                });
-
-                notes.addEventListener("focus", () => {
-                    const keyNotes = notes.dataset.notes?.split(",").filter(Boolean);
-                    if (keyNotes?.length === 1) {
-                        highlightMatching(keyNotes[0]);
-                    }
-                });
-
-                input.addEventListener("input", () => {
-                    const val = input.value;
-                    highlightMatching(val);
-
-                    if (!/^[1-9]$/.test(val)) {
-                        input.value = "";
-                        input.classList.remove("invalid");
-                        return;
-                    }
-
-                    const numVal = Number(val);
-
-                    if (numVal === solutionBoard[row][col]) {
-                        input.readOnly = true;
-                        input.classList.remove("invalid");
-                        input.classList.add("correct");
-                        input.style.display = "block";
-                        notes.style.display = "none";
-
-                        // ✅ Clear notes from UI and state
-                        notes.dataset.notes = "";
-                        notes.innerHTML = "";
-                        // notes.style.display = 'none';
-
-                        const key = `${row}-${col}`;
-                        savedNotes[key] = "";
-                        // localStorage.setItem("savedNotes", JSON.stringify(savedNotes));
-
-                        saveGameState();
-                        renderBoard(puzzle);
-                        applyCompletedClass();
-                        updateDockBoard();
-
-                        return;
-                    }
-
-                    if (notesMode) return;
-
-                    const currentBoard = getCurrentBoard();
-                    currentBoard[row][col] = 0;
-
-                    const isValid = isSafe(currentBoard, row, col, numVal);
-                    input.classList.toggle("invalid", !isValid);
-                    saveGameState();
-                });
-
-                input.addEventListener("blur", () => {
-                    setTimeout(() => {
-                        document.querySelectorAll("#sudokuBoard td.highlighted").forEach(cell => {
-                            cell.classList.remove("highlighted");
-                        });
-                    }, 100);
-                });
-
-                notes.addEventListener("blur", () => {
-                    setTimeout(() => {
-                        document.querySelectorAll("#sudokuBoard td.highlighted").forEach(cell => {
-                            cell.classList.remove("highlighted");
-                        });
-                    }, 100);
-                });
-
-
-                td.addEventListener("keydown", (e) => {
-                    if (!notesMode || Number(input.value) === solutionBoard[row][col]) return;
-
-                    const pressedKey = e.key;
-                    const cellKey = `${row}-${col}`;
-                    let existing = notes.dataset.notes.split(",").filter(Boolean);
-
-                    if (/^[1-9]$/.test(pressedKey)) {
-                        e.preventDefault();
-                        if (existing.includes(pressedKey)) {
-                            existing = existing.filter((n) => n !== pressedKey);
-                        } else {
-                            existing.push(pressedKey);
-                        }
-                        existing.sort();
-                        notes.dataset.notes = existing.join(",");
-                        savedNotes[cellKey] = notes.dataset.notes;
-                        saveGameState();
-                        updateNotesDisplay(notes);
-                        highlightMatching(pressedKey);
-                    }
-
-                    // ✅ Backspace handling in notes mode
-                    if (pressedKey === "Backspace" && existing.length > 0) {
-                        e.preventDefault();
-                        existing = [];
-                        notes.dataset.notes = "";
-                        notes.innerHTML = "";
-                        savedNotes[cellKey] = "";
-                        updateNotesDisplay(notes);
-                        saveGameState();
-                    }
-                });
 
                 wrapper.appendChild(input);
                 wrapper.appendChild(notes);
                 td.appendChild(wrapper);
             } else {
-                // In renderBoard(), inside the else block for fixed cells
                 const fixedVal = originalPuzzle[row][col];
                 td.textContent = fixedVal;
                 td.classList.add("fixed");
 
-                // Add click listener for highlighting
                 td.addEventListener("click", () => {
                     highlightMatching(String(fixedVal));
                 });
             }
 
-            // Add highlight click handler to every cell (fixed or editable)
             td.addEventListener("click", () => {
                 const r = parseInt(td.dataset.row, 10);
                 const c = parseInt(td.dataset.col, 10);
 
-                // Clear previous highlights
+                if (isNaN(r) || isNaN(c)) {
+                    console.error("renderBoard: Invalid cell dataset", { row: td.dataset.row, col: td.dataset.col });
+                    return;
+                }
+
+                selectedCell = td;
+
                 document.querySelectorAll("#sudokuBoard td.highlighted").forEach(cell => {
                     cell.classList.remove("highlighted");
                 });
-
                 document.querySelectorAll("#sudokuBoard td.highlight-ways").forEach(cell => {
                     cell.classList.remove("highlight-ways");
                 });
 
-                // Add highlight to the clicked cell itself
                 td.classList.add("highlighted");
-
-                // Highlight row, col, and box
                 highlightWays(r, c);
 
-                // Optional: if the cell contains a number, highlight matching values too
                 const input = td.querySelector("input");
                 const val = input?.value?.trim() || td.textContent?.trim();
 
-                if (/^[1-9]$/.test(val)) {
+                if (val && !/^[1-9]$/.test(val)) {
+                    console.warn("renderBoard: Invalid value for highlighting", { row: r, col: c, value: val });
+                } else if (val) {
                     highlightMatching(val);
                 }
             });
 
-
-
             tr.appendChild(td);
-            td.dataset.row = row;
-            td.dataset.col = col;
         }
+
         table.appendChild(tr);
     }
 
-    // renderBoard(puzzle);
     applyCompletedClass();
     updateDockBoard();
 }
@@ -425,7 +334,7 @@ function highlightWays(row, col) {
         const inSameRow = r === row;
         const inSameCol = c === col;
         const inSameBox = Math.floor(r / 3) === Math.floor(row / 3) &&
-                          Math.floor(c / 3) === Math.floor(col / 3);
+            Math.floor(c / 3) === Math.floor(col / 3);
 
         if (inSameRow || inSameCol || inSameBox) {
             cell.classList.add("highlight-ways");
@@ -447,7 +356,16 @@ function isSafe(board, row, col, num) {
 }
 
 function solveSudoku(board) {
+    if (!board || !Array.isArray(board) || board.length !== 9) {
+        console.error("solveSudoku: Invalid board input", { board });
+        return false;
+    }
+
     for (let row = 0; row < 9; row++) {
+        if (!Array.isArray(board[row]) || board[row].length !== 9) {
+            console.error("solveSudoku: Invalid row in board", { row, rowData: board[row] });
+            return false;
+        }
         for (let col = 0; col < 9; col++) {
             if (board[row][col] === 0) {
                 for (let num = 1; num <= 9; num++) {
@@ -457,6 +375,7 @@ function solveSudoku(board) {
                         board[row][col] = 0;
                     }
                 }
+                console.warn("solveSudoku: No valid number found for cell", { row, col });
                 return false;
             }
         }
@@ -507,18 +426,34 @@ function getCurrentBoard() {
 }
 
 function isValidSudoku(board) {
+    if (!board || !Array.isArray(board) || board.length !== 9) {
+        console.error("isValidSudoku: Invalid board input", { board });
+        return false;
+    }
+
     const seen = new Set();
     for (let r = 0; r < 9; r++) {
+        if (!Array.isArray(board[r]) || board[r].length !== 9) {
+            console.error("isValidSudoku: Invalid row in board", { row: r, rowData: board[r] });
+            return false;
+        }
         for (let c = 0; c < 9; c++) {
             const val = board[r][c];
+            if (val === 0) continue;
 
-            if (val === 0) return false;
+            if (!/^[1-9]$/.test(String(val))) {
+                console.warn("isValidSudoku: Invalid cell value", { row: r, col: c, value: val });
+                return false;
+            }
 
             const row = `row-${r}-${val}`;
             const col = `col-${c}-${val}`;
             const box = `box-${Math.floor(r / 3)}-${Math.floor(c / 3)}-${val}`;
 
-            if (seen.has(row) || seen.has(col) || seen.has(box)) return false;
+            if (seen.has(row) || seen.has(col) || seen.has(box)) {
+                console.warn("isValidSudoku: Conflict detected", { row: r, col: c, value: val });
+                return false;
+            }
 
             seen.add(row);
             seen.add(col);
@@ -529,48 +464,187 @@ function isValidSudoku(board) {
 }
 
 newGameBtn.addEventListener("click", () => {
+    if (!difficultySelect) {
+        console.error("newGameBtn: difficultySelect element not found in DOM");
+        return;
+    }
     const difficulty = difficultySelect.value;
+    if (!["easy", "medium", "hard"].includes(difficulty)) {
+        console.warn("newGameBtn: Invalid difficulty selected", { difficulty });
+        return;
+    }
+
     const puzzle = generateSudoku(difficulty);
+    if (!puzzle || !Array.isArray(puzzle)) {
+        console.error("newGameBtn: Failed to generate new puzzle", { puzzle });
+        return;
+    }
 
-    localStorage.setItem("originalPuzzle", JSON.stringify(puzzle));
-    localStorage.removeItem("savedNotes");
-    localStorage.removeItem("userInputs");
-    localStorage.removeItem("notesMode");
+    try {
+        localStorage.setItem("originalPuzzle", JSON.stringify(puzzle));
+        localStorage.removeItem("savedNotes");
+        localStorage.removeItem("userInputs");
+        localStorage.removeItem("notesMode");
+    } catch (e) {
+        console.error("newGameBtn: Failed to update localStorage", { error: e.message });
+    }
 
+    savedNotes = {};
+    savedInputs = [];
     notesMode = false;
-    toggleNotesBtn.textContent = "✏️ Notes: Off";
+    if (toggleNotesBtn) {
+        toggleNotesBtn.textContent = "✏️ Notes: Off";
+    } else {
+        console.error("newGameBtn: toggleNotes button not found in DOM");
+    }
 
     renderBoard(puzzle);
     updateDockBoard();
     saveGameState();
 });
 
+document.getElementById("undoBtn").addEventListener("click", () => {
+    if (!moveHistory.length) {
+        console.warn("undoBtn: No moves in history to undo");
+        return;
+    }
+
+    const lastMove = moveHistory.pop();
+    if (!lastMove) {
+        console.error("undoBtn: Invalid last move in history");
+        return;
+    }
+
+    const { row, col, type, prevValue, prevInvalid, wasCorrect, prevNotes } = lastMove;
+
+    const allCells = document.querySelectorAll("#sudokuBoard td");
+    const td = [...allCells].find(cell =>
+        Number(cell.dataset.row) === row && Number(cell.dataset.col) === col
+    );
+
+    if (!td) {
+        console.error("undoBtn: Selected cell not found", { row, col });
+        return;
+    }
+
+    const input = td.querySelector("input");
+    const notes = td.querySelector(".notes-grid");
+
+    if (type === "note") {
+        if (!notes) {
+            console.error("undoBtn: No notes-grid found for note undo", { row, col });
+            return;
+        }
+        notes.dataset.notes = prevNotes || "";
+        savedNotes[`${row}-${col}`] = prevNotes || "";
+        updateNotesDisplay(notes);
+    } else if (input) {
+        input.value = prevValue || "";
+        input.classList.toggle("correct", wasCorrect);
+        input.classList.toggle("invalid", prevInvalid);
+        input.readOnly = wasCorrect;
+
+        if (wasCorrect) {
+            notes.style.display = "none";
+        } else if (notes) {
+            notes.style.display = "";
+        } else {
+            console.warn("undoBtn: No notes-grid found for cell", { row, col });
+        }
+
+        const existingIndex = savedInputs.findIndex(i => i.row === row && i.col === col);
+        if (existingIndex !== -1) {
+            if (!prevValue) {
+                savedInputs.splice(existingIndex, 1);
+            } else {
+                savedInputs[existingIndex].value = prevValue;
+                savedInputs[existingIndex].invalid = prevInvalid;
+            }
+        } else if (prevValue) {
+            savedInputs.push({ row, col, value: prevValue, invalid: prevInvalid });
+        }
+    } else {
+        console.error("undoBtn: No input found for undo", { row, col });
+    }
+
+    saveGameState();
+    applyCompletedClass();
+    updateDockBoard();
+});
+
 hintBtn.addEventListener("click", () => {
     const table = document.getElementById("sudokuBoard");
+    if (!table) {
+        console.error("hintBtn: sudokuBoard table not found in DOM");
+        return;
+    }
+
     const rows = table.querySelectorAll("tr");
+    if (rows.length !== 9) {
+        console.error("hintBtn: Invalid number of rows in sudokuBoard", { rowCount: rows.length });
+        return;
+    }
+
+    const currentBoard = getCurrentBoard();
+    let hintApplied = false;
 
     for (let r = 0; r < 9; r++) {
         const cells = rows[r].querySelectorAll("td");
+        if (cells.length !== 9) {
+            console.error("hintBtn: Invalid number of cells in row", { row: r, cellCount: cells.length });
+            continue;
+        }
         for (let c = 0; c < 9; c++) {
             const cell = cells[c];
             const input = cell.querySelector("input");
             if (input && input.value === "") {
+                if (!solutionBoard[r] || solutionBoard[r][c] === undefined) {
+                    console.error("hintBtn: Invalid solutionBoard access", { row: r, col: c });
+                    continue;
+                }
                 const correct = solutionBoard[r][c];
-                input.value = correct;
+                if (isSafe(currentBoard, r, c, correct)) {
+                    input.value = correct;
+                    input.classList.add("correct");
+                    input.readOnly = true;
+                    const notes = cell.querySelector(".notes-grid");
+                    if (notes) {
+                        notes.style.display = "none";
+                        savedNotes[`${r}-${c}`] = "";
+                    } else {
+                        console.warn("hintBtn: No notes-grid found for cell", { row: r, col: c });
+                    }
 
-                const saved = JSON.parse(localStorage.getItem("userInputs")) || [];
+                    savedInputs.push({ row: r, col: c, value: String(correct), invalid: false });
+                    try {
+                        localStorage.setItem("userInputs", JSON.stringify(savedInputs));
+                    } catch (e) {
+                        console.error("hintBtn: Failed to save userInputs to localStorage", { error: e.message });
+                    }
 
-                saved.push({ row: r, col: c, value: String(correct), invalid: false });
-                localStorage.setItem("userInputs", JSON.stringify(saved));
+                    moveHistory.push({
+                        row: r,
+                        col: c,
+                        prevValue: "",
+                        prevInvalid: false,
+                        wasCorrect: false
+                    });
 
-                saveGameState();
-                renderBoard(getCurrentBoard());
-                updateDockBoard();
-                return;
+                    saveGameState();
+                    renderBoard(getCurrentBoard());
+                    applyCompletedClass();
+                    updateDockBoard();
+                    hintApplied = true;
+                    return;
+                }
             }
         }
     }
-    alert("No more empty cells!");
+
+    if (!hintApplied) {
+        console.warn("hintBtn: No valid hints available");
+        alert("No valid hints available!");
+    }
 });
 
 checkBtn.addEventListener("click", () => {
@@ -587,14 +661,28 @@ checkBtn.addEventListener("click", () => {
 });
 
 function saveGameState() {
+    const table = document.getElementById("sudokuBoard");
+    if (!table) {
+        console.error("saveGameState: sudokuBoard table not found in DOM");
+        return;
+    }
+
+    const rows = table.querySelectorAll("tr");
+    if (rows.length !== 9) {
+        console.error("saveGameState: Invalid number of rows in sudokuBoard", { rowCount: rows.length });
+        return;
+    }
+
     const board = getCurrentBoard();
     const notes = {};
     const inputs = [];
 
-    const table = document.getElementById("sudokuBoard");
-    const rows = table.querySelectorAll("tr");
     for (let r = 0; r < 9; r++) {
         const cells = rows[r].querySelectorAll("td");
+        if (cells.length !== 9) {
+            console.error("saveGameState: Invalid number of cells in row", { row: r, cellCount: cells.length });
+            continue;
+        }
         for (let c = 0; c < 9; c++) {
             const inputEl = cells[c].querySelector("input");
             const notesEl = cells[c].querySelector(".notes-grid");
@@ -611,30 +699,65 @@ function saveGameState() {
             if (notesEl) {
                 const key = `${r}-${c}`;
                 notes[key] = notesEl.dataset.notes || "";
+            } else if (!cells[c].classList.contains("fixed")) {
+                console.warn("saveGameState: Missing notes-grid for non-fixed cell", { row: r, col: c });
             }
         }
     }
 
-    // localStorage.setItem("savedBoard", JSON.stringify(board));
-    localStorage.setItem("savedNotes", JSON.stringify(notes));
-    localStorage.setItem("userInputs", JSON.stringify(inputs));
-    localStorage.setItem("notesMode", JSON.stringify(notesMode));
+    try {
+        // localStorage.setItem("savedBoard", JSON.stringify(board));
+        localStorage.setItem("savedNotes", JSON.stringify(notes));
+        localStorage.setItem("userInputs", JSON.stringify(inputs));
+        localStorage.setItem("notesMode", JSON.stringify(notesMode));
+    } catch (e) {
+        console.error("saveGameState: Failed to save to localStorage", { error: e.message });
+    }
+
+    savedInputs = inputs;
+    savedNotes = notes;
 }
 
 function loadGameState() {
-    const board = JSON.parse(localStorage.getItem("originalPuzzle"));
-    const notes = JSON.parse(localStorage.getItem("savedNotes")) || {};
-    const inputs = JSON.parse(localStorage.getItem("userInputs")) || [];
-    const storedSolution = JSON.parse(localStorage.getItem("solutionBoard"));
+    let board, notes, inputs, storedSolution;
+    try {
+        board - JSON.parse(localStorage.getItem("originalPuzzle"));
+        notes = JSON.parse(localStorage.getItem("savedNotes")) || {};   
+        inputs = JSON.parse(localStorage.getItem("userInputs")) || [];
+        storedSolution = JSON.parse(localStorage.getItem("solutionBoard"));
+    } catch (e) {
+        console.error("loadGameState: Failed to parse localStorage data", {
+            error: e.message,
+            keys: ["originalPuzzle", "savedNotes", "userInputs", "solutionBoard"]
+        });
+        board = null;
+        notes = {};
+        inputs = [];
+        storedSolution = null;
+    }
+
+    if (!board) {
+        console.warn("loadGameState: No original puzzle found in localStorage.");
+    }
 
     if (storedSolution) {
         solutionBoard = storedSolution;
+    } else {
+        console.warn("loadGameState: No solution board found in localStorage.");
     }
 
     notesMode = JSON.parse(localStorage.getItem("notesMode")) || false;
+    if (typeof notesMode !== "boolean") {
+        console.error("loadGameState: Invalid notesMode value", {notesMode});
+        notesMode = false; // Default to false if invalid
+    }
 
     const toggleNotesBtn = document.getElementById("toggleNotes");
-    toggleNotesBtn.textContent = notesMode ? "✏️ Notes: On" : "✏️ Notes: Off";
+    if (!toggleNotesBtn) {
+        console.error("loadGameState: toggleNotes button not found in DOM");
+    } else {
+        toggleNotesBtn.textContent = notesMode ? "✏️ Notes: On" : "✏️ Notes: Off";
+    }
 
     return { board, notes, inputs };
 }
@@ -652,17 +775,121 @@ if (state.board) {
 }
 
 document.addEventListener("keydown", (e) => {
-    if (e.target.tagName === "INPUT") return; // skip when typing in a cell
+    if (e.target.tagName === "INPUT") return;
 
     const key = e.key;
     if (/^[1-9]$/.test(key)) {
         highlightMatching(key);
         highlightDockNumber(key);
+
+        if (!selectedCell) {
+            console.warn("keydown: No cell selected for key input", { key });
+            return;
+        }
+
+        const r = parseInt(selectedCell.dataset.row, 10);
+        const c = parseInt(selectedCell.dataset.col, 10);
+        if (isNaN(r) || isNaN(c)) {
+            console.error("keydown: Invalid selected cell dataset", {
+                row: selectedCell.dataset.row,
+                col: selectedCell.dataset.col
+            });
+            return;
+        }
+
+        const input = selectedCell.querySelector("input");
+        const notes = selectedCell.querySelector(".notes-grid");
+
+        if (!input) {
+            console.error("keydown: No input found in selected cell", { row: r, col: c });
+            return;
+        }
+        if (input.classList.contains("correct")) {
+            console.warn("keydown: Attempted to modify correct cell", { row: r, col: c, key });
+            return;
+        }
+
+        if (notesMode) {
+            if (!notes) {
+                console.error("keydown: No notes-grid found in selected cell", { row: r, col: c });
+                return;
+            }
+            const notesArr = notes.dataset.notes.split(",").filter(Boolean);
+            const prevNotes = notes.dataset.notes;
+            const index = notesArr.indexOf(key);
+            if (index === -1) {
+                notesArr.push(key);
+            } else {
+                notesArr.splice(index, 1);
+            }
+            moveHistory.push({
+                row: r,
+                col: c,
+                type: "note",
+                prevNotes
+            });
+            notes.dataset.notes = notesArr.join(",");
+            savedNotes[`${r}-${c}`] = notes.dataset.notes;
+            updateNotesDisplay(notes);
+            saveGameState();
+        } else {
+            moveHistory.push({
+                row: r,
+                col: c,
+                prevValue: input.value,
+                prevInvalid: input.classList.contains("invalid"),
+                wasCorrect: input.classList.contains("correct")
+            });
+
+            input.value = key;
+            highlightMatching(key);
+
+            const numVal = Number(key);
+            const keyStr = `${r}-${c}`;
+            savedNotes[keyStr] = "";
+            if (notes) {
+                notes.innerHTML = "";
+                notes.dataset.notes = "";
+            } else {
+                console.warn("keydown: No notes-grid for clearing notes", { row: r, col: c });
+            }
+
+            const currentBoard = getCurrentBoard();
+            currentBoard[r][c] = 0;
+
+            const isValid = isSafe(currentBoard, r, c, numVal);
+            input.classList.remove("invalid", "correct");
+
+            if (!solutionBoard[r] || solutionBoard[r][c] === undefined) {
+                console.error("keydown: Invalid solutionBoard access", { row: r, col: c });
+            } else if (numVal === solutionBoard[r][c]) {
+                input.classList.add("correct");
+                input.readOnly = true;
+                if (notes) notes.style.display = "none";
+                savedNotes[keyStr] = "";
+            } else if (!isValid) {
+                input.classList.add("invalid");
+            }
+
+            const existingIndex = savedInputs.findIndex(i => i.row === r && i.col === c);
+            if (existingIndex !== -1) {
+                savedInputs[existingIndex].value = key;
+                savedInputs[existingIndex].invalid = !isValid;
+            } else {
+                savedInputs.push({ row: r, col: c, value: key, invalid: !isValid });
+            }
+
+            saveGameState();
+            renderBoard(getCurrentBoard());
+            applyCompletedClass();
+            updateDockBoard();
+        }
     } else if (e.key === "Escape") {
-        clearHighlights(); // Optional: clear highlight for non-digit keys
+        clearHighlights();
+    } else {
+        console.warn("keydown: Unhandled key pressed", { key });
     }
 });
-
 function applyCompletedClass() {
     const counts = {};
     const allCells = document.querySelectorAll("#sudokuBoard td");
@@ -707,23 +934,33 @@ function highlightDockNumber(val) {
 
 function updateDockBoard() {
     const dockBoard = document.getElementById("dockBoard");
+    if (!dockBoard) {
+        console.error("updateDockBoard: dockBoard element not found in DOM");
+        return;
+    }
+
     dockBoard.innerHTML = "";
 
     const allCells = document.querySelectorAll("#sudokuBoard td");
+    if (!allCells.length) {
+        console.error("updateDockBoard: No cells found in sudokuBoard");
+        return;
+    }
+
     const countMap = {};
 
-    // ✅ Step 1: Count existing digits
     allCells.forEach(cell => {
         const input = cell.querySelector("input");
         const isFixed = cell.classList.contains("fixed");
         const val = isFixed ? cell.textContent.trim() : input?.value?.trim();
 
-        if (/^[1-9]$/.test(val)) {
+        if (val && !/^[1-9]$/.test(val)) {
+            console.warn("updateDockBoard: Invalid cell value detected", { value: val });
+        } else if (val) {
             countMap[val] = (countMap[val] || 0) + 1;
         }
     });
 
-    // ✅ Step 2: Then create dock cells based on actual counts
     for (let i = 1; i <= 9; i++) {
         const digit = String(i);
         const filledCount = countMap[digit] || 0;
@@ -741,7 +978,120 @@ function updateDockBoard() {
         dockBoard.appendChild(dockCell);
 
         dockCell.addEventListener("click", () => {
-            highlightMatching(digit);
+            if (!selectedCell) {
+                console.warn("updateDockBoard: No cell selected for dock input", { digit });
+                return;
+            }
+
+            const r = parseInt(selectedCell.dataset.row, 10);
+            const c = parseInt(selectedCell.dataset.col, 10);
+            if (isNaN(r) || isNaN(c)) {
+                console.error("updateDockBoard: Invalid selected cell dataset", {
+                    row: selectedCell.dataset.row,
+                    col: selectedCell.dataset.col
+                });
+                return;
+            }
+
+            const wrapper = selectedCell.querySelector(".cell-wrapper");
+            const input = wrapper?.querySelector("input");
+            const notes = wrapper?.querySelector(".notes-grid");
+
+            if (!input) {
+                console.error("updateDockBoard: No input found in selected cell", { row: r, col: c });
+                return;
+            }
+            if (input.classList.contains("correct")) {
+                console.warn("updateDockBoard: Attempted to modify correct cell", { row: r, col: c });
+                return;
+            }
+
+            const value = digit;
+
+            if (notesMode) {
+                if (!notes) {
+                    console.error("updateDockBoard: No notes-grid found in selected cell", { row: r, col: c });
+                    return;
+                }
+                const notesArr = notes.dataset.notes.split(",").filter(Boolean);
+                const prevNotes = notes.dataset.notes;
+                const index = notesArr.indexOf(value);
+                if (index === -1) {
+                    notesArr.push(value);
+                } else {
+                    notesArr.splice(index, 1);
+                }
+                moveHistory.push({
+                    row: r,
+                    col: c,
+                    type: "note",
+                    prevNotes
+                });
+                notes.dataset.notes = notesArr.join(",");
+                savedNotes[`${r}-${c}`] = notes.dataset.notes;
+                updateNotesDisplay(notes);
+                saveGameState();
+                return;
+            }
+
+            if (input.value !== value) {
+                moveHistory.push({
+                    row: r,
+                    col: c,
+                    prevValue: input.value,
+                    prevInvalid: input.classList.contains("invalid"),
+                    wasCorrect: input.classList.contains("correct")
+                });
+            }
+
+            input.value = value;
+            highlightMatching(value);
+
+            const numVal = Number(value);
+            const key = `${r}-${c}`;
+            savedNotes[key] = "";
+            if (notes) {
+                notes.innerHTML = "";
+                notes.dataset.notes = "";
+            } else {
+                console.warn("updateDockBoard: No notes-grid for clearing notes", { row: r, col: c });
+            }
+
+            const currentBoard = getCurrentBoard();
+            currentBoard[r][c] = 0;
+
+            const isValid = isSafe(currentBoard, r, c, numVal);
+            input.classList.remove("invalid", "correct");
+
+            if (!solutionBoard[r] || solutionBoard[r][c] === undefined) {
+                console.error("updateDockBoard: Invalid solutionBoard access", { row: r, col: c });
+            } else if (numVal === solutionBoard[r][c]) {
+                input.classList.add("correct");
+                input.readOnly = true;
+                if (notes) notes.style.display = "none";
+                savedNotes[key] = "";
+                saveGameState();
+                renderBoard(getCurrentBoard());
+                applyCompletedClass();
+                updateDockBoard();
+                return;
+            }
+
+            if (!isValid) {
+                input.classList.add("invalid");
+            }
+
+            const existingIndex = savedInputs.findIndex(i => i.row === r && i.col === c);
+            if (existingIndex !== -1) {
+                savedInputs[existingIndex].value = value;
+                savedInputs[existingIndex].invalid = !isValid;
+            } else {
+                savedInputs.push({ row: r, col: c, value, invalid: !isValid });
+            }
+
+            saveGameState();
+            applyCompletedClass();
+            updateDockBoard();
         });
     }
 }
