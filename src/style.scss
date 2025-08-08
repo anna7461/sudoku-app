@@ -100,7 +100,7 @@ td input {
 
   &.correct:not(.highlighted .correct) {
     font-weight: bold;
-    color: $success;
+    color: $success !important;
   }
 
   &:focus {

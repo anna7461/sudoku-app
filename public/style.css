@@ -76,7 +76,7 @@ td input {
 }
 td input.correct:not(.highlighted .correct) {
   font-weight: bold;
-  color: #37be76;
+  color: #37be76 !important;
 }
 td input:focus {
   outline: none;
