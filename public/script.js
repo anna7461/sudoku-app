@@ -133,12 +133,19 @@ document.addEventListener("click", (e) => {
 });
 
 function updateNotesDisplay(notesEl) {
+    // If the notes box is hidden, do nothing
     if (notesEl.style.display === "none") return;
 
+    // Get notes from data attribute (e.g., "1,3,7") → ["1", "3", "7"]
     const notesArr = notesEl.dataset.notes?.split(",").filter(Boolean) || [];
+
+    // Clear old notes
     notesEl.innerHTML = "";
 
+    // Check if this notes element is inside a Sudoku grid cell
     const td = notesEl.closest("td");
+
+    // If NOT inside a table cell, just display notes without checking conflicts
     if (!td) {
         for (let i = 1; i <= 9; i++) {
             const note = document.createElement("div");
@@ -151,51 +158,99 @@ function updateNotesDisplay(notesEl) {
         return;
     }
 
+    // Find this cell's row & column
     const tr = td.parentElement;
     const row = Array.from(tr.parentElement.children).indexOf(tr);
     const col = Array.from(tr.children).indexOf(td);
 
+    // Get current board state
     const currentBoard = getCurrentBoard();
 
-    function conflicts(row, col, val) {
+    // Helper: check if a number already exists in same row/column/box
+    function numberAlreadyPlaced(row, col, val) {
+        // Row check
         for (let c = 0; c < 9; c++) {
-            if (c !== col) {
-                const cellVal = Number(currentBoard[row][c]);
-                if (cellVal && cellVal === val) return true;
-            }
+            if (c !== col && Number(currentBoard[row][c]) === val) return true;
         }
+        // Column check
         for (let r = 0; r < 9; r++) {
-            if (r !== row) {
-                const cellVal = Number(currentBoard[r][col]);
-                if (cellVal && cellVal === val) return true;
-            }
+            if (r !== row && Number(currentBoard[r][col]) === val) return true;
         }
-
+        // 3×3 box check
         const boxStartRow = row - (row % 3);
         const boxStartCol = col - (col % 3);
-
         for (let r = 0; r < 3; r++) {
             for (let c = 0; c < 3; c++) {
                 const rr = boxStartRow + r;
                 const cc = boxStartCol + c;
-                if (rr !== row || cc !== col) {
-                    const cellVal = Number(currentBoard[rr][cc]);
-                    if (cellVal && cellVal === val) return true;
+                if ((rr !== row || cc !== col) && Number(currentBoard[rr][cc]) === val) {
+                    return true;
                 }
             }
         }
         return false;
     }
 
-    for (let i = 1; i <= 9; i++) {
-        const note = document.createElement("div");
-        note.classList.add("note");
-        if (notesArr.includes(String(i))) {
-            note.textContent = i;
-            if (conflicts(row, col, Number(i))) {
-                note.classList.add("conflict-note");
+    function removeNoteFromCellNotes(row, col, value) {
+        const table = document.getElementById("sudoku-table"); // Adjust if your table has another id
+        const tr = table.tBodies[0].rows[row];
+        const td = tr.cells[col];
+        const notesEl = td.querySelector("[data-notes]");
+        if (!notesEl) return;
+
+        let notesArr = notesEl.dataset.notes?.split(",").filter(Boolean) || [];
+        const filtered = notesArr.filter(n => n !== String(value));
+        if (filtered.length === notesArr.length) return; // nothing changed
+
+        notesEl.dataset.notes = filtered.join(",");
+        updateNotesDisplay(notesEl);
+    }
+
+    function removeNotesFromPeers(row, col, value) {
+        const boxStartRow = row - (row % 3);
+        const boxStartCol = col - (col % 3);
+
+        // Remove from row
+        for (let c = 0; c < 9; c++) {
+            if (c !== col) removeNoteFromCellNotes(row, c, value);
+        }
+        // Remove from column
+        for (let r = 0; r < 9; r++) {
+            if (r !== row) removeNoteFromCellNotes(r, col, value);
+        }
+        // Remove from box
+        for (let r = boxStartRow; r < boxStartRow + 3; r++) {
+            for (let c = boxStartCol; c < boxStartCol + 3; c++) {
+                if (r !== row || c !== col) removeNoteFromCellNotes(r, c, value);
             }
         }
+    }
+
+    // Helper: original conflict checker (kept for styling)
+    function conflicts(row, col, val) {
+        return numberAlreadyPlaced(row, col, val);
+    }
+
+    // Draw notes for 1–9
+    for (let i = 1; i <= 9; i++) {
+        // Only show numbers actually in the notes array
+        if (!notesArr.includes(String(i))) continue;
+
+        // If the same number is already solved in row/col/box → skip showing it
+        // But ONLY skip if this cell itself is EMPTY (not when typing in notes mode)
+        if (!currentBoard[row][col] && numberAlreadyPlaced(row, col, Number(i))) {
+            continue;
+        }
+
+        const note = document.createElement("div");
+        note.classList.add("note");
+        note.textContent = i;
+
+        // If it's in notes but breaks rules → mark as conflict
+        if (conflicts(row, col, Number(i))) {
+            note.classList.add("conflict-note");
+        }
+
         notesEl.appendChild(note);
     }
 }
